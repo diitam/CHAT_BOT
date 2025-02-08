@@ -2,111 +2,152 @@
 <html>
 
 <head>
-  <title>Chat App</title>
+  <title>ChatBot</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/lib/languages/python.min.js"></script>
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fad0c4, #ffdde1);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      width: 90%;
+      max-width: 900px;
+      height: 90vh;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .chat-history {
+      width: 30%;
+      background: rgba(255, 255, 255, 0.3);
+      padding: 15px;
+      border-radius: 15px 0 0 15px;
+      overflow-y: auto;
+    }
+    .chat-container {
+      width: 70%;
+      padding: 20px;
+    }
+    .chat-box {
+      height: 400px;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .message {
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .user-message {
+      background: #007bff;
+      color: white;
+      text-align: right;
+    }
+    .bot-message {
+      background: #e9ecef;
+      color: black;
+      text-align: left;
+    }
+    .input-group textarea {
+      border-radius: 10px;
+    }
+    .send-btn {
+      border-radius: 10px;
+      background: #007bff;
+      color: white;
+    }
+    .chat-history div {
+      padding: 10px;
+      background: #f1f1f1;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body>
-  <div class="container mt-5">
-    <h1 style="color:white">Chat Bot</h1>
-    <div class="chat-box mt-3">
-      <!-- Chat messages will be added here dynamically -->
+  <div class="container">
+    <div class="chat-history" id="chat-history">
+      <h5>Chat History</h5>
     </div>
-    <div class="form-group mt-3">
-      <textarea class="form-control" rows="3" placeholder="Type your message here" id="message-input"></textarea>
+    <div class="chat-container">
+      <h1 class="text-center text-white">ChatBot</h1>
+      <div class="d-flex justify-content-end mb-2">
+        <select class="form-select w-50" id="model-select">
+          <option value="gpt-3.5-turbo" selected>GPT-3.5 Turbo</option>
+          <option value="gpt-4">GPT-4</option>
+        </select>
+      </div>
+      <div class="chat-box" id="chat-box"></div>
+      <div class="input-group mt-3">
+        <textarea class="form-control" rows="2" id="message-input" placeholder="Type your message..."></textarea>
+        <button class="btn send-btn" id="send-btn">Send</button>
+      </div>
     </div>
-    <button type="button" class="btn btn-primary" id="send-btn">Send</button>
   </div>
-  <script>
-setInterval(highlightAll,1000);
-// Function to highlight code using highlight.js library
-function highlightAll() {
-  document.querySelectorAll("pre code").forEach(block => {
-    hljs.highlightBlock(block);
-  });
-}
 
-    const chatBox = document.querySelector(".chat-box");
+  <script>
+    const chatBox = document.querySelector("#chat-box");
     const messageInput = document.querySelector("#message-input");
     const sendBtn = document.querySelector("#send-btn");
+    const modelSelect = document.querySelector("#model-select");
+    const chatHistory = document.querySelector("#chat-history");
 
-    function addMessage(message, isUserMessage) {
+    function addMessage(message, isUser) {
       const messageDiv = document.createElement("div");
-      messageDiv.classList.add("mt-3", "p-3", "rounded");
-
-      if (isUserMessage) {
-        messageDiv.classList.add("user-message");
-
-      } else {
-        messageDiv.classList.add("bot-message");
-      }
-
-      messageDiv.innerHTML = `
-        <img src="{{ url_for('static', filename='images/user.png') }}" class="user-icon"><p>${message}</p>
-        `;
-
+      messageDiv.classList.add("message", isUser ? "user-message" : "bot-message");
+      messageDiv.textContent = message;
       chatBox.appendChild(messageDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-
-
+    function addChatToHistory(chatText) {
+      const chatItem = document.createElement("div");
+      chatItem.textContent = chatText;
+      chatItem.onclick = () => loadChat(chatText);
+      chatHistory.appendChild(chatItem);
+    }
+    fetch("/history")
+  .then(response => response.json())
+  .then(chats => {
+    chats.forEach(chat => {
+      addChatToHistory(chat.user);
+      addMessage(chat.user, true);
+      addMessage(chat.bot, false);
+    });
+  })
+  .catch(error => console.error(error));
 
     function sendMessage() {
       const message = messageInput.value.trim();
-
+      const model = modelSelect.value;
       if (message !== "") {
         addMessage(message, true);
-
+        addChatToHistory(message);
+        messageInput.value = "";
         fetch("/api", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ message })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, model })
         })
           .then(response => response.json())
-          .then(data => {
-                      messageInput.value = "";
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("mt-3", "p-3", "rounded");
-            messageDiv.classList.add("bot-message");
-           
-            const content = data.content;
-            
-            // Check if the content has code block
-            const hasCodeBlock = content.includes("```");
-            if (hasCodeBlock) {
-              // If the content has code block, wrap it in a <pre><code> element
-              const codeContent = content.replace(/```([\s\S]+?)```/g, '</p><pre><code>$1</code></pre><p>');
-
-             
-              messageDiv.innerHTML = `<img src="{{ url_for('static', filename='images/gpt.jpg') }}" class="bot-icon"><p>${codeContent}</p>`
-             
-            }
-            else{
-              messageDiv.innerHTML = `<img src="{{ url_for('static', filename='images/gpt.jpg') }}" class="bot-icon"><p>${content}</p>`
-            }
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-          })
+          .then(data => addMessage(data.content, false))
           .catch(error => console.error(error));
       }
     }
 
-    
     sendBtn.addEventListener("click", sendMessage);
     messageInput.addEventListener("keydown", event => {
       if (event.keyCode === 13 && !event.shiftKey) {
